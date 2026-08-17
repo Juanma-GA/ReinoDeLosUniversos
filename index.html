@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reino de los Universos - Arena de Criaturas</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ================= SELECCIÓN DE PERSONAJE ================= -->
+  <section id="select-screen" class="screen active">
+    <header class="select-header">
+      <h1>Reino de los Universos</h1>
+      <p class="subtitle">Elige tu criatura para entrar en la arena</p>
+    </header>
+    <div id="character-grid"></div>
+    <button id="btn-start" disabled>Entrar a la arena</button>
+  </section>
+
+  <!-- ================= COMBATE ================= -->
+  <section id="combat-screen" class="screen">
+    <div id="hud">
+      <div class="hud-bar player-hud">
+        <div class="hud-top">
+          <span class="hud-icon" id="player-icon"></span>
+          <span class="hud-name" id="player-name"></span>
+        </div>
+        <div class="hp-bar-outer"><div class="hp-bar-inner" id="player-hp"></div><span class="hp-text" id="player-hp-text"></span></div>
+      </div>
+      <div class="vs-badge">VS</div>
+      <div class="hud-bar cpu-hud">
+        <div class="hud-top">
+          <span class="hud-name" id="cpu-name"></span>
+          <span class="hud-icon" id="cpu-icon"></span>
+        </div>
+        <div class="hp-bar-outer"><div class="hp-bar-inner" id="cpu-hp"></div><span class="hp-text" id="cpu-hp-text"></span></div>
+      </div>
+    </div>
+    <canvas id="arena" width="900" height="600"></canvas>
+    <div id="controls-hint">WASD / Flechas: moverse &nbsp;·&nbsp; Ratón: apuntar &nbsp;·&nbsp; Clic o Espacio: atacar</div>
+  </section>
+
+  <!-- ================= RESULTADO ================= -->
+  <section id="result-screen" class="screen">
+    <div class="result-box">
+      <h1 id="result-title"></h1>
+      <p id="result-subtitle"></p>
+      <div class="result-buttons">
+        <button id="btn-rematch">Revancha</button>
+        <button id="btn-reselect">Elegir otro personaje</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="characters.js"></script>
+<script src="combat.js"></script>
+<script src="ui.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
