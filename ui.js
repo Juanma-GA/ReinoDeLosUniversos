@@ -14,7 +14,7 @@ function buildCharacterGrid(onSelect) {
     card.dataset.id = c.id;
 
     card.innerHTML = `
-      <div class="char-icon">${c.icon}</div>
+      <div class="char-icon" id="char-icon-${c.id}"></div>
       <div class="char-name">${c.name}</div>
       <div class="char-role">${c.role}</div>
       <div class="char-lore">${c.lore}</div>
@@ -44,7 +44,26 @@ function buildCharacterGrid(onSelect) {
     });
 
     grid.appendChild(card);
+    renderCardIcon(c);
   });
+}
+
+// Muestra el sprite pre-renderizado del personaje (pose idle) en su tarjeta,
+// o el emoji como respaldo mientras ese personaje no tenga sprite propio.
+function renderCardIcon(c) {
+  const host = document.getElementById(`char-icon-${c.id}`);
+  const spriteSet = SPRITE_CACHE[c.id];
+  if (!spriteSet) {
+    host.textContent = c.icon;
+    return;
+  }
+  const size = 64;
+  const preview = document.createElement('canvas');
+  preview.width = size;
+  preview.height = size;
+  const pctx = preview.getContext('2d');
+  pctx.drawImage(spriteSet.idle, 0, 0, SPRITE_SIZE, SPRITE_SIZE, 0, 0, size, size);
+  host.appendChild(preview);
 }
 
 function attackTypeLabel(c) {

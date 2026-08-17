@@ -43,6 +43,7 @@ class Entity {
     this.kbVX = 0;
     this.kbVY = 0;
     this.alive = true;
+    this.isMoving = false;
   }
 
   get isPhasing() {
@@ -145,6 +146,7 @@ function updateProjectiles(projectiles, now) {
 // `speedMultiplier` permite ajustar la velocidad de movimiento resultante sin tocar el stat base (usado por la IA).
 function moveEntity(entity, dx, dy, dtScale, speedMultiplier = 1) {
   const len = Math.hypot(dx, dy);
+  entity.isMoving = len > 0;
   if (len > 0) {
     const speed = entity.def.speedStat * dtScale * speedMultiplier;
     entity.x += (dx / len) * speed;

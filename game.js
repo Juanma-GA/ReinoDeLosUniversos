@@ -263,31 +263,43 @@
     ctx.restore();
   }
 
+  const SPRITE_DISPLAY_SCALE = 0.8;
+
   function drawEntity(entity, now) {
     const { x, y, radius, def, facing } = entity;
     const phasing = now < entity.phaseUntil;
     const hitFlash = now < entity.hitFlashUntil;
     const attackFlash = now < entity.attackFlashUntil;
+    const sprite = SPRITE_CACHE[def.id];
 
     ctx.save();
     ctx.globalAlpha = phasing ? 0.35 : 1;
 
-    // Sombra
+    // Sombra de contacto
     ctx.beginPath();
     ctx.ellipse(x, y + radius * 0.8, radius * 0.9, radius * 0.35, 0, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fill();
 
-    // Cuerpo
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = hitFlash ? '#ffffff' : def.color;
-    ctx.strokeStyle = attackFlash ? '#ffffff' : 'rgba(0,0,0,0.5)';
-    ctx.lineWidth = attackFlash ? 4 : 2;
-    ctx.fill();
-    ctx.stroke();
+    if (sprite) {
+      drawCreatureSprite(sprite, entity, now, attackFlash, hitFlash);
+    } else {
+      // Fallback provisional (círculo + emoji) para personajes sin sprite propio todavía.
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = hitFlash ? '#ffffff' : def.color;
+      ctx.strokeStyle = attackFlash ? '#ffffff' : 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = attackFlash ? 4 : 2;
+      ctx.fill();
+      ctx.stroke();
 
-    // Rango de ataque melee (arco sutil) al golpear
+      ctx.font = `${radius}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(def.icon, x, y - 2);
+    }
+
+    // Rango de ataque melee (arco sutil) al golpear, por encima del sprite
     if (attackFlash && def.attackType === 'melee') {
       ctx.beginPath();
       ctx.moveTo(x, y);
@@ -297,14 +309,7 @@
       ctx.fill();
     }
 
-    // Icono
-    ctx.globalAlpha = phasing ? 0.35 : 1;
-    ctx.font = `${radius}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(def.icon, x, y - 2);
-
-    // Indicador de orientación
+    // Indicador de orientación (apunte preciso, más allá del flip izq/der del sprite)
     ctx.beginPath();
     ctx.moveTo(x + Math.cos(facing) * radius, y + Math.sin(facing) * radius);
     ctx.lineTo(x + Math.cos(facing) * (radius + 10), y + Math.sin(facing) * (radius + 10));
@@ -315,9 +320,53 @@
     // Nombre
     ctx.font = 'bold 12px sans-serif';
     ctx.fillStyle = '#fff';
-    ctx.fillText(def.name, x, y - radius - 10);
+    ctx.textAlign = 'center';
+    ctx.fillText(def.name, x, y - radius - 14);
 
     ctx.restore();
+  }
+
+  // Dibuja el frame de sprite pre-renderizado adecuado (idle/walk/attack), con flip
+  // horizontal según hacia dónde mira el personaje. No redibuja formas, solo hace drawImage.
+  function drawCreatureSprite(spriteSet, entity, now, attackFlash, hitFlash) {
+    const { x, y, facing } = entity;
+    let frameKey = 'idle';
+    if (attackFlash) {
+      frameKey = 'attack';
+    } else if (entity.isMoving) {
+      frameKey = Math.floor(now / 150) % 2 === 0 ? 'walk1' : 'walk2';
+    }
+    const frame = spriteSet[frameKey];
+    const flip = Math.cos(facing) < 0;
+    const size = SPRITE_SIZE * SPRITE_DISPLAY_SCALE;
+    const anchor = SPRITE_ANCHOR * SPRITE_DISPLAY_SCALE;
+
+    if (hitFlash) {
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath();
+      ctx.arc(x, y, size * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(x, y);
+    if (flip) ctx.scale(-1, 1);
+    ctx.drawImage(frame, -anchor, -anchor, size, size);
+    ctx.restore();
+
+    if (attackFlash) {
+      ctx.save();
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.arc(x, y, size * 0.46, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   // ---------- Resultado ----------
