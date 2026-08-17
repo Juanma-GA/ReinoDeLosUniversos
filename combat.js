@@ -5,10 +5,24 @@ const ARENA_W = 900;
 const ARENA_H = 600;
 const ENTITY_RADIUS = 22;
 
+// Multiplica el alcance de impacto de los ataques cuerpo a cuerpo (Enano, Troll,
+// Humano, Orco, Espectro) respecto al valor base `range` definido en characters.js.
+const MELEE_RANGE_MULTIPLIER = 2;
+
+// Reduce la velocidad de movimiento de la CPU respecto al stat base del personaje,
+// sin tocar dicho stat (que sigue rigiendo cadencia/esquiva y el movimiento del jugador).
+const AI_SPEED_MULTIPLIER = 0.75;
+
 function normalizeAngle(a) {
   while (a > Math.PI) a -= Math.PI * 2;
   while (a < -Math.PI) a += Math.PI * 2;
   return a;
+}
+
+// Alcance de impacto efectivo de un personaje: los melee se duplican, los ranged
+// mantienen su alcance base (que ya representa el rango del proyectil).
+function getAttackRange(def) {
+  return def.attackType === 'melee' ? def.range * MELEE_RANGE_MULTIPLIER : def.range;
 }
 
 class Entity {
@@ -89,7 +103,7 @@ function performAttack(attacker, target, now, projectiles) {
   const dx = target.x - attacker.x;
   const dy = target.y - attacker.y;
   const dist = Math.hypot(dx, dy);
-  if (dist > attacker.def.range + target.radius) return { hit: false, reason: 'range' };
+  if (dist > getAttackRange(attacker.def) + target.radius) return { hit: false, reason: 'range' };
 
   const angleToTarget = Math.atan2(dy, dx);
   const diff = Math.abs(normalizeAngle(angleToTarget - attacker.facing));
@@ -128,10 +142,11 @@ function updateProjectiles(projectiles, now) {
 }
 
 // Mueve una entidad según un vector de dirección normalizado (dx, dy) y aplica knockback + límites de arena.
-function moveEntity(entity, dx, dy, dtScale) {
+// `speedMultiplier` permite ajustar la velocidad de movimiento resultante sin tocar el stat base (usado por la IA).
+function moveEntity(entity, dx, dy, dtScale, speedMultiplier = 1) {
   const len = Math.hypot(dx, dy);
   if (len > 0) {
-    const speed = entity.def.speedStat * dtScale;
+    const speed = entity.def.speedStat * dtScale * speedMultiplier;
     entity.x += (dx / len) * speed;
     entity.y += (dy / len) * speed;
   }
@@ -155,7 +170,7 @@ function updateAI(cpu, player, now, dtScale, projectiles) {
   cpu.facing = Math.atan2(dy, dx);
 
   const isRanged = cpu.def.attackType === 'ranged';
-  const atkRange = isRanged ? cpu.def.range * 0.85 : cpu.def.range + 8;
+  const atkRange = isRanged ? cpu.def.range * 0.85 : getAttackRange(cpu.def) + 8;
   const preferredDist = isRanged ? atkRange * 0.6 : atkRange * 0.55;
 
   let moveX = 0;
@@ -179,7 +194,7 @@ function updateAI(cpu, player, now, dtScale, projectiles) {
     moveY = Math.sin(perp) * 0.4;
   }
 
-  moveEntity(cpu, moveX, moveY, dtScale);
+  moveEntity(cpu, moveX, moveY, dtScale, AI_SPEED_MULTIPLIER);
 
   if (dist <= atkRange && cpu.canAttack(now)) {
     performAttack(cpu, player, now, projectiles);

@@ -13,6 +13,7 @@
   let mouseX = ARENA_W / 2;
   let mouseY = ARENA_H / 2;
   const keys = new Set();
+  let arenaBackground = null; // canvas offscreen con la textura + decoración pre-renderizadas
 
   // ---------- Selección ----------
   buildCharacterGrid(() => {
@@ -36,6 +37,10 @@
     player = new Entity(playerDef, ARENA_W * 0.25, ARENA_H * 0.5, true);
     cpu = new Entity(cpuDef, ARENA_W * 0.75, ARENA_H * 0.5, false);
     projectiles = [];
+    arenaBackground = buildArenaBackground([
+      { x: player.x, y: player.y, r: 100 },
+      { x: cpu.x, y: cpu.y, r: 100 }
+    ]);
 
     setHudIdentity(playerDef, cpuDef);
     updateHUD(player, cpu);
@@ -115,40 +120,136 @@
 
   // ---------- Render ----------
   function render(now) {
-    drawArenaBackground();
+    if (arenaBackground) {
+      ctx.drawImage(arenaBackground, 0, 0);
+    }
     for (const p of projectiles) drawProjectile(p);
     drawEntity(cpu, now);
     drawEntity(player, now);
   }
 
-  function drawArenaBackground() {
-    const g = ctx.createRadialGradient(
+  // Genera posiciones para rocas y árboles decorativos evitando las zonas de aparición
+  // de los personajes (spawnZones) y el solape entre elementos.
+  function generateArenaProps(spawnZones) {
+    const margin = 45;
+    const specs = [
+      { type: 'tree', count: 6, minSize: 24, maxSize: 34 },
+      { type: 'rock', count: 9, minSize: 10, maxSize: 20 }
+    ];
+    const props = [];
+
+    for (const spec of specs) {
+      let placed = 0;
+      let attempts = 0;
+      while (placed < spec.count && attempts < 200) {
+        attempts++;
+        const x = margin + Math.random() * (ARENA_W - margin * 2);
+        const y = margin + Math.random() * (ARENA_H - margin * 2);
+        const size = spec.minSize + Math.random() * (spec.maxSize - spec.minSize);
+
+        const inSpawnZone = spawnZones.some(z => Math.hypot(x - z.x, y - z.y) < z.r + size);
+        if (inSpawnZone) continue;
+
+        const overlaps = props.some(p => Math.hypot(x - p.x, y - p.y) < (size + p.size) * 1.3);
+        if (overlaps) continue;
+
+        props.push({ type: spec.type, x, y, size });
+        placed++;
+      }
+    }
+    return props;
+  }
+
+  // Pre-renderiza fondo de tierra/hierba con textura orgánica + rocas y árboles en un
+  // canvas offscreen, para no recalcular ruido ni decoración en cada frame (60fps).
+  function buildArenaBackground(spawnZones) {
+    const off = document.createElement('canvas');
+    off.width = ARENA_W;
+    off.height = ARENA_H;
+    const octx = off.getContext('2d');
+
+    const g = octx.createRadialGradient(
       ARENA_W / 2, ARENA_H / 2, 60,
       ARENA_W / 2, ARENA_H / 2, ARENA_W / 1.1
     );
-    g.addColorStop(0, '#3a5f3a');
-    g.addColorStop(1, '#1c2e1c');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, ARENA_W, ARENA_H);
+    g.addColorStop(0, '#5c6b3c');
+    g.addColorStop(0.55, '#42522d');
+    g.addColorStop(1, '#28331d');
+    octx.fillStyle = g;
+    octx.fillRect(0, 0, ARENA_W, ARENA_H);
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < ARENA_W; x += 40) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, ARENA_H);
-      ctx.stroke();
+    // Manchas orgánicas de tierra/hierba para romper la uniformidad del suelo.
+    const blotchPalette = ['#6f7f45', '#4c5c2e', '#7d6c40', '#57481f', '#3e4c25', '#8a7247'];
+    for (let i = 0; i < 150; i++) {
+      const x = Math.random() * ARENA_W;
+      const y = Math.random() * ARENA_H;
+      const r = 14 + Math.random() * 42;
+      octx.globalAlpha = 0.07 + Math.random() * 0.09;
+      octx.fillStyle = blotchPalette[Math.floor(Math.random() * blotchPalette.length)];
+      octx.beginPath();
+      octx.ellipse(x, y, r, r * (0.45 + Math.random() * 0.5), Math.random() * Math.PI, 0, Math.PI * 2);
+      octx.fill();
     }
-    for (let y = 0; y < ARENA_H; y += 40) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(ARENA_W, y);
-      ctx.stroke();
+    octx.globalAlpha = 1;
+
+    const props = generateArenaProps(spawnZones);
+    for (const prop of props) drawArenaProp(octx, prop);
+
+    octx.strokeStyle = 'rgba(0,0,0,0.6)';
+    octx.lineWidth = 8;
+    octx.strokeRect(4, 4, ARENA_W - 8, ARENA_H - 8);
+
+    return off;
+  }
+
+  function drawArenaProp(octx, prop) {
+    octx.save();
+    octx.translate(prop.x, prop.y);
+
+    if (prop.type === 'rock') {
+      octx.beginPath();
+      octx.ellipse(2, prop.size * 0.4, prop.size * 0.9, prop.size * 0.35, 0, 0, Math.PI * 2);
+      octx.fillStyle = 'rgba(0,0,0,0.25)';
+      octx.fill();
+
+      octx.beginPath();
+      octx.moveTo(-prop.size, 0);
+      octx.lineTo(-prop.size * 0.4, -prop.size * 0.8);
+      octx.lineTo(prop.size * 0.5, -prop.size * 0.6);
+      octx.lineTo(prop.size, prop.size * 0.1);
+      octx.lineTo(prop.size * 0.3, prop.size * 0.5);
+      octx.lineTo(-prop.size * 0.6, prop.size * 0.4);
+      octx.closePath();
+      octx.fillStyle = '#8a8a86';
+      octx.fill();
+      octx.strokeStyle = 'rgba(0,0,0,0.3)';
+      octx.lineWidth = 2;
+      octx.stroke();
+    } else {
+      // Árbol: sombra, tronco y copa en dos tonos.
+      octx.beginPath();
+      octx.ellipse(2, prop.size * 0.2, prop.size * 1.1, prop.size * 0.4, 0, 0, Math.PI * 2);
+      octx.fillStyle = 'rgba(0,0,0,0.3)';
+      octx.fill();
+
+      octx.fillStyle = '#5b3a22';
+      octx.fillRect(-prop.size * 0.12, -prop.size * 0.2, prop.size * 0.24, prop.size * 0.5);
+
+      octx.fillStyle = '#2f5a2b';
+      octx.beginPath();
+      octx.arc(0, -prop.size * 0.5, prop.size * 0.75, 0, Math.PI * 2);
+      octx.fill();
+
+      octx.fillStyle = '#3d7038';
+      octx.beginPath();
+      octx.arc(-prop.size * 0.25, -prop.size * 0.75, prop.size * 0.55, 0, Math.PI * 2);
+      octx.fill();
+      octx.beginPath();
+      octx.arc(prop.size * 0.3, -prop.size * 0.7, prop.size * 0.5, 0, Math.PI * 2);
+      octx.fill();
     }
 
-    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-    ctx.lineWidth = 8;
-    ctx.strokeRect(4, 4, ARENA_W - 8, ARENA_H - 8);
+    octx.restore();
   }
 
   function drawProjectile(p) {
@@ -190,7 +291,7 @@
     if (attackFlash && def.attackType === 'melee') {
       ctx.beginPath();
       ctx.moveTo(x, y);
-      ctx.arc(x, y, def.range, facing - Math.PI / 2.2, facing + Math.PI / 2.2);
+      ctx.arc(x, y, getAttackRange(def), facing - Math.PI / 2.2, facing + Math.PI / 2.2);
       ctx.closePath();
       ctx.fillStyle = 'rgba(255,255,255,0.25)';
       ctx.fill();
