@@ -32,7 +32,15 @@ const CHARACTERS = [
     attackType: 'ranged',
     attackName: 'Flecha',
     range: 480,
-    projectile: { speed: 9, radius: 5, color: '#4ade80' }
+    projectile: { speed: 9, radius: 5, color: '#4ade80' },
+    super: {
+      name: 'Lluvia de flechas',
+      type: 'multishot',
+      cooldown: 8000,
+      damagePerArrow: 14,
+      spread: 0.22,
+      range: 480
+    }
   },
   {
     id: 'enano',
@@ -50,7 +58,15 @@ const CHARACTERS = [
     attackType: 'melee',
     attackName: 'Martillazo',
     range: 60,
-    knockback: 6
+    knockback: 6,
+    super: {
+      name: 'Golpe sísmico',
+      type: 'aoe_stun',
+      cooldown: 10000,
+      damage: 30,
+      radius: 90,
+      stunDuration: 1000
+    }
   },
   {
     id: 'troll',
@@ -68,7 +84,16 @@ const CHARACTERS = [
     attackType: 'melee',
     attackName: 'Garrotazo',
     range: 65,
-    knockback: 12
+    knockback: 12,
+    super: {
+      name: 'Embestida brutal',
+      type: 'charge',
+      cooldown: 12000,
+      damage: 50,
+      knockback: 20,
+      speed: 13,
+      duration: 450
+    }
   },
   {
     id: 'hada',
@@ -86,7 +111,14 @@ const CHARACTERS = [
     attackType: 'ranged',
     attackName: 'Chispa mágica',
     range: 300,
-    projectile: { speed: 8, radius: 3, color: '#f472b6' }
+    projectile: { speed: 8, radius: 3, color: '#f472b6' },
+    super: {
+      name: 'Polvo de niebla',
+      type: 'phase_heal',
+      cooldown: 9000,
+      phaseDuration: 1500,
+      healAmount: 10
+    }
   },
   {
     id: 'humano',
@@ -104,7 +136,13 @@ const CHARACTERS = [
     attackType: 'melee',
     attackName: 'Estocada',
     range: 70,
-    knockback: 4
+    knockback: 4,
+    super: {
+      name: 'Golpe certero',
+      type: 'guaranteed_crit_melee',
+      cooldown: 7000,
+      damage: 28
+    }
   },
   {
     id: 'mago',
@@ -150,7 +188,15 @@ const CHARACTERS = [
     attackType: 'ranged',
     attackName: 'Honda',
     range: 260,
-    projectile: { speed: 10, radius: 3, color: '#facc15' }
+    projectile: { speed: 10, radius: 3, color: '#facc15' },
+    super: {
+      name: 'Ráfaga de piedras',
+      type: 'burst',
+      cooldown: 6000,
+      damage: 7,
+      count: 3,
+      interval: 130
+    }
   },
   {
     id: 'orco',
@@ -195,7 +241,15 @@ const CHARACTERS = [
     range: 62,
     knockback: 3,
     penetration: 0.40,
-    phaseOnDodge: 300
+    phaseOnDodge: 300,
+    super: {
+      name: 'Terror espectral',
+      type: 'pure_damage_slow',
+      cooldown: 9000,
+      damage: 26,
+      slowDuration: 1000,
+      slowFactor: 0.4
+    }
   }
 ];
 

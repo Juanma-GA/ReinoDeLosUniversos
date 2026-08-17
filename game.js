@@ -102,18 +102,28 @@
   }
 
   function update(now, dtScale) {
-    // Jugador: apunta al ratón y se mueve con WASD/flechas.
-    player.facing = Math.atan2(mouseY - player.y, mouseX - player.x);
+    const ctx2 = { projectiles, effects };
 
-    let mx = 0, my = 0;
-    if (keys.has('w') || keys.has('arrowup')) my -= 1;
-    if (keys.has('s') || keys.has('arrowdown')) my += 1;
-    if (keys.has('a') || keys.has('arrowleft')) mx -= 1;
-    if (keys.has('d') || keys.has('arrowright')) mx += 1;
-    moveEntity(player, mx, my, dtScale);
+    // Embestida del Troll (u otra carga futura): mientras dura, sustituye al control normal.
+    const playerCharging = updateCharge(player, cpu, now, dtScale, effects);
+    processPendingBursts(player, cpu, now, ctx2);
+
+    if (!playerCharging && !player.isStunned) {
+      // Jugador: apunta al ratón y se mueve con WASD/flechas.
+      player.facing = Math.atan2(mouseY - player.y, mouseX - player.x);
+
+      let mx = 0, my = 0;
+      if (keys.has('w') || keys.has('arrowup')) my -= 1;
+      if (keys.has('s') || keys.has('arrowdown')) my += 1;
+      if (keys.has('a') || keys.has('arrowleft')) mx -= 1;
+      if (keys.has('d') || keys.has('arrowright')) mx += 1;
+      moveEntity(player, mx, my, dtScale, 1, now);
+    } else if (player.isStunned) {
+      moveEntity(player, 0, 0, dtScale, 1, now);
+    }
 
     if (cpu.alive) {
-      updateAI(cpu, player, now, dtScale, { projectiles, effects });
+      updateAI(cpu, player, now, dtScale, ctx2);
     }
 
     projectiles = updateProjectiles(projectiles, now, effects);
@@ -134,6 +144,12 @@
 
   // ---------- Render ----------
   function render(now) {
+    const shake = getActiveShake(now);
+    ctx.save();
+    if (shake) {
+      ctx.translate((Math.random() * 2 - 1) * shake.magnitude, (Math.random() * 2 - 1) * shake.magnitude);
+    }
+
     if (arenaBackground) {
       ctx.drawImage(arenaBackground, 0, 0);
     }
@@ -141,11 +157,24 @@
     drawEntity(cpu, now);
     drawEntity(player, now);
     drawEffects(now);
+
+    ctx.restore();
+  }
+
+  // Devuelve el efecto de temblor de cámara más intenso activo en este instante, o null.
+  function getActiveShake(now) {
+    let best = null;
+    for (const e of effects) {
+      if (e.type === 'shake' && now - e.startTime < e.duration && (!best || e.magnitude > best.magnitude)) {
+        best = e;
+      }
+    }
+    return best;
   }
 
   // Dibuja los efectos visuales transitorios de los súper ataques. Son formas simples
-  // (círculos/anillos) recalculadas cada frame solo mientras están activas (pocas a la vez),
-  // no pre-renderizadas como el fondo o los sprites porque su tamaño/opacidad varía con el tiempo.
+  // (círculos/anillos/partículas) recalculadas cada frame solo mientras están activas (pocas
+  // a la vez), no pre-renderizadas como el fondo o los sprites porque varían con el tiempo.
   function drawEffects(now) {
     for (const e of effects) {
       const t = Math.min(1, (now - e.startTime) / e.duration);
@@ -170,7 +199,96 @@
         ctx.arc(ent.x, ent.y, ent.radius + 8 + pulse * 4, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
+      } else if (e.type === 'shockwave') {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - t) * 0.7;
+        ctx.strokeStyle = e.color;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.radius * t, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      } else if (e.type === 'dustTrail') {
+        const ent = e.entity;
+        if (!ent) continue;
+        for (let i = 1; i <= 3; i++) {
+          const back = i * 10;
+          const px = ent.x - Math.cos(ent.facing) * back;
+          const py = ent.y - Math.sin(ent.facing) * back;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, 1 - t) * (0.3 / i);
+          ctx.fillStyle = '#c9b892';
+          ctx.beginPath();
+          ctx.ellipse(px, py, 10 - i, 6 - i * 0.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      } else if (e.type === 'sparkleAura') {
+        const ent = e.entity;
+        if (!ent || !ent.alive) continue;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - t);
+        ctx.fillStyle = '#ffffff';
+        for (let i = 0; i < 5; i++) {
+          const ang = now / 200 + i * ((Math.PI * 2) / 5);
+          const sx = ent.x + Math.cos(ang) * (ent.radius + 10);
+          const sy = ent.y + Math.sin(ang) * (ent.radius + 10) * 0.6;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      } else if (e.type === 'critText') {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - t);
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#7a4a00';
+        ctx.fillStyle = '#ffd700';
+        const y = e.y - t * 20;
+        ctx.strokeText('¡CRÍTICO!', e.x, y);
+        ctx.fillText('¡CRÍTICO!', e.x, y);
+        ctx.restore();
+      } else if (e.type === 'critFlash') {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - t) * 0.8;
+        ctx.fillStyle = '#fff7d6';
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, 26 * (1 - t * 0.3), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else if (e.type === 'terrorAura') {
+        const ent = e.entity;
+        if (!ent) continue;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - t) * 0.5;
+        ctx.strokeStyle = e.color;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(ent.x, ent.y, ent.radius + 6 + t * 10, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      } else if (e.type === 'speedLines') {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - t);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        const perpAng = e.angle + Math.PI / 2;
+        for (let i = 0; i < 3; i++) {
+          const off = (i - 1) * 5;
+          const sx = e.x + Math.cos(perpAng) * off - Math.cos(e.angle) * 10;
+          const sy = e.y + Math.sin(perpAng) * off - Math.sin(e.angle) * 10;
+          const ex = sx - Math.cos(e.angle) * 14;
+          const ey = sy - Math.sin(e.angle) * 14;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(ex, ey);
+          ctx.stroke();
+        }
+        ctx.restore();
       }
+      // 'shake' no dibuja nada aquí: se resuelve en render() desplazando el canvas.
     }
   }
 
@@ -299,6 +417,19 @@
   }
 
   function drawProjectile(p) {
+    if (p.trail && p.prevX != null) {
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.radius;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(p.prevX, p.prevY);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     ctx.save();
     ctx.shadowColor = p.color;
     ctx.shadowBlur = 10;
@@ -362,6 +493,34 @@
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 3;
     ctx.stroke();
+
+    // Distorsión del Terror espectral: anillo violeta pulsante sobre el objetivo afectado.
+    if (now < entity.distortUntil) {
+      const pulse = 0.5 + 0.5 * Math.sin(now / 60);
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x, y, radius + 6 + pulse * 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Aturdimiento del Golpe sísmico: estrellitas orbitando la cabeza.
+    if (now < entity.stunnedUntil) {
+      ctx.save();
+      ctx.fillStyle = '#fde68a';
+      for (let i = 0; i < 3; i++) {
+        const ang = now / 150 + i * ((Math.PI * 2) / 3);
+        const sx = x + Math.cos(ang) * 14;
+        const sy = y - radius - 14 + Math.sin(ang) * 5;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
 
     // Nombre
     ctx.font = 'bold 12px sans-serif';
