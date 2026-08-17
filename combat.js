@@ -44,6 +44,11 @@ class Entity {
     this.kbVY = 0;
     this.alive = true;
     this.isMoving = false;
+
+    // Súper ataque: no disponible al inicio del combate, debe cargar su cooldown completo.
+    this.superLastUsedAt = performance.now();
+    this.buffAttackUntil = 0;
+    this.buffAttackMultiplier = 1;
   }
 
   get isPhasing() {
@@ -53,23 +58,36 @@ class Entity {
   canAttack(now) {
     return now - this.lastAttackTime >= this.def.cooldown;
   }
+
+  canUseSuper(now) {
+    return !!this.def.super && now - this.superLastUsedAt >= this.def.super.cooldown;
+  }
 }
 
 // Resuelve el impacto de un ataque de `attacker` sobre `target`.
-function applyDamage(attacker, target, now) {
+// `options` permite a los súper ataques modificar la resolución normal:
+//  - damageOverride: usa este daño en vez de attacker.def.attack (ya con el multiplicador de furia aplicado si corresponde)
+//  - guaranteed: ignora la probabilidad de esquiva del objetivo
+//  - ignoreReduction: ignora por completo la reducción de daño del objetivo (daño puro)
+function applyDamage(attacker, target, now, options) {
+  options = options || {};
   if (target.isPhasing) {
     return { hit: false, reason: 'phase' };
   }
-  if (Math.random() < target.def.dodge) {
+  if (!options.guaranteed && Math.random() < target.def.dodge) {
     if (target.def.phaseOnDodge) target.phaseUntil = now + target.def.phaseOnDodge;
     target.dodgeFlashUntil = now + 300;
     return { hit: false, reason: 'dodge' };
   }
-  let reduction = target.def.reduction;
+  let reduction = options.ignoreReduction ? 0 : target.def.reduction;
   if (attacker.def.penetration) {
     reduction = reduction * (1 - attacker.def.penetration);
   }
-  const dmg = Math.max(1, Math.round(attacker.def.attack * (1 - reduction)));
+  const baseAttack = now < attacker.buffAttackUntil
+    ? attacker.def.attack * attacker.buffAttackMultiplier
+    : attacker.def.attack;
+  const atk = options.damageOverride != null ? options.damageOverride : baseAttack;
+  const dmg = Math.max(1, Math.round(atk * (1 - reduction)));
   target.hp = Math.max(0, target.hp - dmg);
   target.hitFlashUntil = now + 200;
   if (target.hp <= 0) target.alive = false;
@@ -118,7 +136,7 @@ function performAttack(attacker, target, now, projectiles) {
   return result;
 }
 
-function updateProjectiles(projectiles, now) {
+function updateProjectiles(projectiles, now, effects) {
   for (const p of projectiles) {
     if (p.dead) continue;
     p.x += p.vx;
@@ -135,11 +153,72 @@ function updateProjectiles(projectiles, now) {
     }
     const d = Math.hypot(p.x - p.target.x, p.y - p.target.y);
     if (d <= p.radius + p.target.radius) {
-      applyDamage(p.owner, p.target, now);
+      applyDamage(p.owner, p.target, now, p.options);
+      if (p.explosionRadius && effects) {
+        effects.push({
+          type: 'explosion',
+          x: p.x,
+          y: p.y,
+          color: p.color,
+          radius: p.explosionRadius,
+          startTime: now,
+          duration: 380
+        });
+      }
       p.dead = true;
     }
   }
   return projectiles.filter(p => !p.dead);
+}
+
+// Elimina los efectos visuales transitorios (explosiones, ondas, auras) ya expirados.
+function updateEffects(effects, now) {
+  return effects.filter(e => now - e.startTime < e.duration);
+}
+
+// Ejecuta el súper ataque de `attacker` (tecla R / IA) contra `target` si el cooldown lo permite.
+// `ctx` = { projectiles, effects }, los mismos arrays vivos que usa el loop principal.
+function performSuper(attacker, target, now, ctx) {
+  const superDef = attacker.def.super;
+  if (!superDef || !attacker.canUseSuper(now)) return false;
+
+  attacker.superLastUsedAt = now;
+  attacker.attackFlashUntil = now + 200;
+
+  switch (superDef.type) {
+    case 'attack_buff': {
+      attacker.buffAttackUntil = now + superDef.duration;
+      attacker.buffAttackMultiplier = superDef.multiplier;
+      ctx.effects.push({
+        type: 'buffAura',
+        entity: attacker,
+        color: '#ff5a5a',
+        startTime: now,
+        duration: superDef.duration
+      });
+      return true;
+    }
+    case 'big_fireball': {
+      ctx.projectiles.push({
+        x: attacker.x + Math.cos(attacker.facing) * (attacker.radius + 4),
+        y: attacker.y + Math.sin(attacker.facing) * (attacker.radius + 4),
+        vx: Math.cos(attacker.facing) * superDef.speed,
+        vy: Math.sin(attacker.facing) * superDef.speed,
+        radius: superDef.radius,
+        color: '#ff7a3c',
+        owner: attacker,
+        target,
+        traveled: 0,
+        maxRange: superDef.range,
+        explosionRadius: superDef.explosionRadius,
+        options: { damageOverride: superDef.damage },
+        dead: false
+      });
+      return true;
+    }
+    default:
+      return false;
+  }
 }
 
 // Mueve una entidad según un vector de dirección normalizado (dx, dy) y aplica knockback + límites de arena.
@@ -165,7 +244,8 @@ function moveEntity(entity, dx, dy, dtScale, speedMultiplier = 1) {
 }
 
 // IA básica de la CPU: persigue/kitea, ataca cuando puede y a veces esquiva desplazándose.
-function updateAI(cpu, player, now, dtScale, projectiles) {
+// `ctx` = { projectiles, effects }.
+function updateAI(cpu, player, now, dtScale, ctx) {
   const dx = player.x - cpu.x;
   const dy = player.y - cpu.y;
   const dist = Math.hypot(dx, dy) || 1;
@@ -199,6 +279,11 @@ function updateAI(cpu, player, now, dtScale, projectiles) {
   moveEntity(cpu, moveX, moveY, dtScale, AI_SPEED_MULTIPLIER);
 
   if (dist <= atkRange && cpu.canAttack(now)) {
-    performAttack(cpu, player, now, projectiles);
+    performAttack(cpu, player, now, ctx.projectiles);
+  }
+
+  // Súper ataque: lo intenta cuando el rival está cerca (melee) o dentro de su alcance (ranged).
+  if (cpu.canUseSuper(now) && dist <= atkRange * 1.3) {
+    performSuper(cpu, player, now, ctx);
   }
 }

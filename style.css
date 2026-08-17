@@ -261,6 +261,48 @@ body {
   font-size: 1.1rem;
 }
 
+.super-bar-outer {
+  position: relative;
+  height: 14px;
+  margin-top: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.super-bar-inner {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #7c3aed, #a855f7);
+  transition: width 0.15s ease;
+}
+
+.super-bar-outer.ready {
+  border-color: #facc15;
+  animation: superPulse 1s ease-in-out infinite;
+}
+
+.super-bar-outer.ready .super-bar-inner {
+  background: linear-gradient(90deg, #facc15, #fde68a);
+}
+
+@keyframes superPulse {
+  0%, 100% { box-shadow: 0 0 6px 1px rgba(250, 204, 21, 0.6); }
+  50% { box-shadow: 0 0 14px 4px rgba(253, 230, 138, 0.85); }
+}
+
+.super-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 #arena {
   background: #1c2e1c;
   border-radius: 14px;

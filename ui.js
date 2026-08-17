@@ -84,6 +84,28 @@ function setHpBar(prefix, entity) {
   text.textContent = `${Math.ceil(entity.hp)} / ${entity.maxHp}`;
 }
 
+// Actualiza la barra de recarga del súper ataque del jugador (única visible en el HUD).
+function updateSuperHUD(entity, now) {
+  const host = document.getElementById('player-super-outer');
+  const bar = document.getElementById('player-super');
+  const text = document.getElementById('player-super-text');
+
+  if (!entity.def.super) {
+    host.style.visibility = 'hidden';
+    return;
+  }
+  host.style.visibility = 'visible';
+
+  const elapsed = now - entity.superLastUsedAt;
+  const pct = Math.min(1, elapsed / entity.def.super.cooldown);
+  bar.style.width = `${pct * 100}%`;
+  const ready = pct >= 1;
+  host.classList.toggle('ready', ready);
+  text.textContent = ready
+    ? `R: ${entity.def.super.name} · ¡LISTO!`
+    : `R: ${entity.def.super.name} (${Math.ceil((entity.def.super.cooldown - elapsed) / 1000)}s)`;
+}
+
 function setHudIdentity(playerChar, cpuChar) {
   document.getElementById('player-icon').textContent = playerChar.icon;
   document.getElementById('player-name').textContent = playerChar.name;

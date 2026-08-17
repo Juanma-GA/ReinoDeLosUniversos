@@ -122,7 +122,17 @@ const CHARACTERS = [
     attackType: 'ranged',
     attackName: 'Bola de fuego',
     range: 460,
-    projectile: { speed: 6.5, radius: 8, color: '#a855f7' }
+    projectile: { speed: 6.5, radius: 8, color: '#a855f7' },
+    super: {
+      name: 'Bola de fuego mayor',
+      type: 'big_fireball',
+      cooldown: 11000,
+      damage: 42,
+      radius: 14,
+      speed: 4.5,
+      range: 460,
+      explosionRadius: 36
+    }
   },
   {
     id: 'hobbit',
@@ -158,7 +168,14 @@ const CHARACTERS = [
     attackType: 'melee',
     attackName: 'Hachazo',
     range: 68,
-    knockback: 7
+    knockback: 7,
+    super: {
+      name: 'Furia orca',
+      type: 'attack_buff',
+      cooldown: 10000,
+      multiplier: 1.5,
+      duration: 3000
+    }
   },
   {
     id: 'espectro',

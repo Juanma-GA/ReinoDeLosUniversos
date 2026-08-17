@@ -9,6 +9,7 @@
   let player = null;
   let cpu = null;
   let projectiles = [];
+  let effects = []; // efectos visuales transitorios de los súper ataques (explosiones, auras, ondas...)
   let lastTime = 0;
   let mouseX = ARENA_W / 2;
   let mouseY = ARENA_H / 2;
@@ -37,6 +38,7 @@
     player = new Entity(playerDef, ARENA_W * 0.25, ARENA_H * 0.5, true);
     cpu = new Entity(cpuDef, ARENA_W * 0.75, ARENA_H * 0.5, false);
     projectiles = [];
+    effects = [];
     arenaBackground = buildArenaBackground([
       { x: player.x, y: player.y, r: 100 },
       { x: cpu.x, y: cpu.y, r: 100 }
@@ -44,6 +46,7 @@
 
     setHudIdentity(playerDef, cpuDef);
     updateHUD(player, cpu);
+    updateSuperHUD(player, performance.now());
     showScreen('combat-screen');
     state = 'combat';
     lastTime = performance.now();
@@ -56,6 +59,10 @@
     if (e.key === ' ') {
       e.preventDefault();
       attemptPlayerAttack();
+    }
+    if (e.key.toLowerCase() === 'r') {
+      e.preventDefault();
+      attemptPlayerSuper();
     }
   });
   window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
@@ -74,6 +81,11 @@
   function attemptPlayerAttack() {
     if (state !== 'combat' || !player.alive) return;
     performAttack(player, cpu, performance.now(), projectiles);
+  }
+
+  function attemptPlayerSuper() {
+    if (state !== 'combat' || !player.alive) return;
+    performSuper(player, cpu, performance.now(), { projectiles, effects });
   }
 
   // ---------- Loop ----------
@@ -101,11 +113,13 @@
     moveEntity(player, mx, my, dtScale);
 
     if (cpu.alive) {
-      updateAI(cpu, player, now, dtScale, projectiles);
+      updateAI(cpu, player, now, dtScale, { projectiles, effects });
     }
 
-    projectiles = updateProjectiles(projectiles, now);
+    projectiles = updateProjectiles(projectiles, now, effects);
+    effects = updateEffects(effects, now);
     updateHUD(player, cpu);
+    updateSuperHUD(player, now);
 
     if (!player.alive || !cpu.alive) {
       endCombat(cpu.alive === false);
@@ -126,6 +140,38 @@
     for (const p of projectiles) drawProjectile(p);
     drawEntity(cpu, now);
     drawEntity(player, now);
+    drawEffects(now);
+  }
+
+  // Dibuja los efectos visuales transitorios de los súper ataques. Son formas simples
+  // (círculos/anillos) recalculadas cada frame solo mientras están activas (pocas a la vez),
+  // no pre-renderizadas como el fondo o los sprites porque su tamaño/opacidad varía con el tiempo.
+  function drawEffects(now) {
+    for (const e of effects) {
+      const t = Math.min(1, (now - e.startTime) / e.duration);
+
+      if (e.type === 'explosion') {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - t);
+        ctx.fillStyle = e.color;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.radius * (0.4 + t * 0.6), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else if (e.type === 'buffAura') {
+        const ent = e.entity;
+        if (!ent || !ent.alive) continue;
+        const pulse = 0.5 + 0.5 * Math.sin(now / 120);
+        ctx.save();
+        ctx.globalAlpha = 0.3 + 0.25 * pulse;
+        ctx.strokeStyle = e.color;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(ent.x, ent.y, ent.radius + 8 + pulse * 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
   }
 
   // Genera posiciones para rocas y árboles decorativos evitando las zonas de aparición
