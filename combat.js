@@ -13,6 +13,15 @@ const MELEE_RANGE_MULTIPLIER = 2;
 // sin tocar dicho stat (que sigue rigiendo cadencia/esquiva y el movimiento del jugador).
 const AI_SPEED_MULTIPLIER = 0.75;
 
+// Humaniza el apuntado de la CPU a distancia (Elfo, Mago, Hobbit, Hada): no fija la mira
+// al instante ni con precisión perfecta como antes. No afecta al apuntado del jugador (ratón)
+// ni al de los personajes melee (dependen del rango/arco, no de un ángulo fino).
+const AI_AIM_REACTION_DELAY = 350; // ms de "tiempo de reacción" antes de empezar a girar hacia el objetivo al entrar en rango
+const AI_AIM_TURN_RATE = 0.05; // radianes que puede girar la mira por frame (a 60fps) — giro gradual, no salto instantáneo
+const AI_AIM_ERROR_MAX = 0.12; // ±radianes (~7°) de imprecisión máxima que se suma al ángulo real
+const AI_AIM_ERROR_REROLL_MIN = 300; // ms mínimos antes de recalcular un nuevo error de puntería
+const AI_AIM_ERROR_REROLL_MAX = 700; // ms máximos antes de recalcular un nuevo error de puntería
+
 function normalizeAngle(a) {
   while (a > Math.PI) a -= Math.PI * 2;
   while (a < -Math.PI) a += Math.PI * 2;
@@ -44,6 +53,11 @@ class Entity {
     this.kbVY = 0;
     this.alive = true;
     this.isMoving = false;
+
+    // Humanización del apuntado de la CPU a distancia (no usado por el jugador).
+    this.aimRangeEnteredAt = null;
+    this.aimErrorValue = 0;
+    this.aimErrorUntil = 0;
 
     // Súper ataque: no disponible al inicio del combate, debe cargar su cooldown completo.
     this.superLastUsedAt = performance.now();
@@ -459,11 +473,13 @@ function updateAI(cpu, player, now, dtScale, ctx) {
   const dx = player.x - cpu.x;
   const dy = player.y - cpu.y;
   const dist = Math.hypot(dx, dy) || 1;
-  cpu.facing = Math.atan2(dy, dx);
+  const trueAngle = Math.atan2(dy, dx);
 
   const isRanged = cpu.def.attackType === 'ranged';
   const atkRange = isRanged ? cpu.def.range * 0.85 : getAttackRange(cpu.def) + 8;
   const preferredDist = isRanged ? atkRange * 0.6 : atkRange * 0.55;
+
+  updateAiFacing(cpu, trueAngle, dist <= atkRange, now, dtScale);
 
   let moveX = 0;
   let moveY = 0;
@@ -488,12 +504,58 @@ function updateAI(cpu, player, now, dtScale, ctx) {
 
   moveEntity(cpu, moveX, moveY, dtScale, AI_SPEED_MULTIPLIER, now);
 
-  if (dist <= atkRange && cpu.canAttack(now)) {
+  const acquired = hasAcquiredTarget(cpu, now);
+
+  if (dist <= atkRange && cpu.canAttack(now) && acquired) {
     performAttack(cpu, player, now, ctx.projectiles);
   }
 
   // Súper ataque: lo intenta cuando el rival está cerca (melee) o dentro de su alcance (ranged).
-  if (cpu.canUseSuper(now) && dist <= atkRange * 1.3) {
+  if (cpu.canUseSuper(now) && dist <= atkRange * 1.3 && acquired) {
     performSuper(cpu, player, now, ctx);
   }
+}
+
+// Humaniza `cpu.facing` para personajes a distancia: tiempo de reacción antes de trabar el
+// objetivo al entrar en rango, giro gradual limitado por frame (nunca un salto instantáneo)
+// y un pequeño error de puntería que se recalcula cada cierto tiempo. Los melee mantienen el
+// apuntado instantáneo de siempre (dependen del rango/arco, no de un ángulo fino), y el
+// apuntado del jugador (ratón) no pasa por aquí en absoluto.
+function updateAiFacing(cpu, trueAngle, inRange, now, dtScale) {
+  if (cpu.def.attackType !== 'ranged') {
+    cpu.facing = trueAngle;
+    return;
+  }
+
+  if (!inRange) {
+    // Fuera de rango de ataque: se orienta con normalidad mientras persigue o kitea.
+    cpu.facing = trueAngle;
+    cpu.aimRangeEnteredAt = null;
+    return;
+  }
+
+  if (cpu.aimRangeEnteredAt == null) {
+    cpu.aimRangeEnteredAt = now;
+  }
+
+  if (now - cpu.aimRangeEnteredAt < AI_AIM_REACTION_DELAY) {
+    return; // Tiempo de reacción: todavía no empieza a girar hacia el objetivo.
+  }
+
+  if (now >= cpu.aimErrorUntil) {
+    cpu.aimErrorValue = (Math.random() * 2 - 1) * AI_AIM_ERROR_MAX;
+    cpu.aimErrorUntil = now + AI_AIM_ERROR_REROLL_MIN + Math.random() * (AI_AIM_ERROR_REROLL_MAX - AI_AIM_ERROR_REROLL_MIN);
+  }
+
+  const targetAngle = trueAngle + cpu.aimErrorValue;
+  const diff = normalizeAngle(targetAngle - cpu.facing);
+  const maxTurn = AI_AIM_TURN_RATE * dtScale;
+  cpu.facing = Math.abs(diff) <= maxTurn ? targetAngle : normalizeAngle(cpu.facing + Math.sign(diff) * maxTurn);
+}
+
+// Un personaje ranged sólo "ha trabado" el objetivo (puede disparar) tras su tiempo de
+// reacción dentro del rango; los melee siempre lo tienen adquirido (sin cambios de comportamiento).
+function hasAcquiredTarget(cpu, now) {
+  if (cpu.def.attackType !== 'ranged') return true;
+  return cpu.aimRangeEnteredAt != null && now - cpu.aimRangeEnteredAt >= AI_AIM_REACTION_DELAY;
 }
