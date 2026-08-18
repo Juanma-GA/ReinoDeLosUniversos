@@ -34,6 +34,13 @@ function getAttackRange(def) {
   return def.attackType === 'melee' ? def.range * MELEE_RANGE_MULTIPLIER : def.range;
 }
 
+// Distancia a la que una entidad (jugador o CPU) considera que el rival está "en rango de
+// combate": algo menor que el alcance real para ranged (para no disparar al límite exacto),
+// o el alcance de impacto + un margen para melee. Compartido entre la IA y el auto-apuntado del jugador.
+function getEngageRange(def) {
+  return def.attackType === 'ranged' ? def.range * 0.85 : getAttackRange(def) + 8;
+}
+
 class Entity {
   constructor(charDef, x, y, isPlayer) {
     this.def = charDef;
@@ -476,7 +483,7 @@ function updateAI(cpu, player, now, dtScale, ctx) {
   const trueAngle = Math.atan2(dy, dx);
 
   const isRanged = cpu.def.attackType === 'ranged';
-  const atkRange = isRanged ? cpu.def.range * 0.85 : getAttackRange(cpu.def) + 8;
+  const atkRange = getEngageRange(cpu.def);
   const preferredDist = isRanged ? atkRange * 0.6 : atkRange * 0.55;
 
   updateAiFacing(cpu, trueAngle, dist <= atkRange, now, dtScale);
@@ -516,46 +523,48 @@ function updateAI(cpu, player, now, dtScale, ctx) {
   }
 }
 
-// Humaniza `cpu.facing` para personajes a distancia: tiempo de reacción antes de trabar el
-// objetivo al entrar en rango, giro gradual limitado por frame (nunca un salto instantáneo)
-// y un pequeño error de puntería que se recalcula cada cierto tiempo. Los melee mantienen el
-// apuntado instantáneo de siempre (dependen del rango/arco, no de un ángulo fino), y el
-// apuntado del jugador (ratón) no pasa por aquí en absoluto.
-function updateAiFacing(cpu, trueAngle, inRange, now, dtScale) {
-  if (cpu.def.attackType !== 'ranged') {
-    cpu.facing = trueAngle;
+// Humaniza `entity.facing` hacia un objetivo para personajes a distancia: tiempo de reacción
+// antes de trabar el objetivo al entrar en rango, giro gradual limitado por frame (nunca un
+// salto instantáneo) y un pequeño error de puntería que se recalcula cada cierto tiempo. Los
+// melee mantienen el apuntado instantáneo de siempre (dependen del rango/arco, no de un ángulo
+// fino). La usan tanto la IA (apuntando al jugador) como el auto-apuntado del propio jugador
+// (apuntando al rival más cercano), para que ambos "sientan" igual al disparar.
+function updateAiFacing(entity, trueAngle, inRange, now, dtScale) {
+  if (entity.def.attackType !== 'ranged') {
+    entity.facing = trueAngle;
     return;
   }
 
   if (!inRange) {
-    // Fuera de rango de ataque: se orienta con normalidad mientras persigue o kitea.
-    cpu.facing = trueAngle;
-    cpu.aimRangeEnteredAt = null;
+    // Fuera de rango de ataque: se orienta con normalidad mientras persigue o se reposiciona.
+    entity.facing = trueAngle;
+    entity.aimRangeEnteredAt = null;
     return;
   }
 
-  if (cpu.aimRangeEnteredAt == null) {
-    cpu.aimRangeEnteredAt = now;
+  if (entity.aimRangeEnteredAt == null) {
+    entity.aimRangeEnteredAt = now;
   }
 
-  if (now - cpu.aimRangeEnteredAt < AI_AIM_REACTION_DELAY) {
+  if (now - entity.aimRangeEnteredAt < AI_AIM_REACTION_DELAY) {
     return; // Tiempo de reacción: todavía no empieza a girar hacia el objetivo.
   }
 
-  if (now >= cpu.aimErrorUntil) {
-    cpu.aimErrorValue = (Math.random() * 2 - 1) * AI_AIM_ERROR_MAX;
-    cpu.aimErrorUntil = now + AI_AIM_ERROR_REROLL_MIN + Math.random() * (AI_AIM_ERROR_REROLL_MAX - AI_AIM_ERROR_REROLL_MIN);
+  if (now >= entity.aimErrorUntil) {
+    entity.aimErrorValue = (Math.random() * 2 - 1) * AI_AIM_ERROR_MAX;
+    entity.aimErrorUntil = now + AI_AIM_ERROR_REROLL_MIN + Math.random() * (AI_AIM_ERROR_REROLL_MAX - AI_AIM_ERROR_REROLL_MIN);
   }
 
-  const targetAngle = trueAngle + cpu.aimErrorValue;
-  const diff = normalizeAngle(targetAngle - cpu.facing);
+  const targetAngle = trueAngle + entity.aimErrorValue;
+  const diff = normalizeAngle(targetAngle - entity.facing);
   const maxTurn = AI_AIM_TURN_RATE * dtScale;
-  cpu.facing = Math.abs(diff) <= maxTurn ? targetAngle : normalizeAngle(cpu.facing + Math.sign(diff) * maxTurn);
+  entity.facing = Math.abs(diff) <= maxTurn ? targetAngle : normalizeAngle(entity.facing + Math.sign(diff) * maxTurn);
 }
 
 // Un personaje ranged sólo "ha trabado" el objetivo (puede disparar) tras su tiempo de
 // reacción dentro del rango; los melee siempre lo tienen adquirido (sin cambios de comportamiento).
-function hasAcquiredTarget(cpu, now) {
-  if (cpu.def.attackType !== 'ranged') return true;
-  return cpu.aimRangeEnteredAt != null && now - cpu.aimRangeEnteredAt >= AI_AIM_REACTION_DELAY;
+// La usan tanto la IA como el jugador (auto-apuntado).
+function hasAcquiredTarget(entity, now) {
+  if (entity.def.attackType !== 'ranged') return true;
+  return entity.aimRangeEnteredAt != null && now - entity.aimRangeEnteredAt >= AI_AIM_REACTION_DELAY;
 }

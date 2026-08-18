@@ -11,9 +11,11 @@
 
   <!-- ================= SELECCIÓN DE PERSONAJE ================= -->
   <section id="select-screen" class="screen active">
+    <button id="btn-reset-progress" title="Borrar monedas, desbloqueos y mejoras">↺ Reiniciar progreso</button>
     <header class="select-header">
       <h1>Reino de los Universos</h1>
       <p class="subtitle">Elige tu criatura para entrar en la arena</p>
+      <div id="coin-display">🪙 <span id="coin-count">0</span></div>
     </header>
     <div id="character-grid"></div>
     <button id="btn-start" disabled>Entrar a la arena</button>
@@ -43,7 +45,7 @@
       </div>
     </div>
     <canvas id="arena" width="900" height="600"></canvas>
-    <div id="controls-hint">WASD / Flechas: moverse &nbsp;·&nbsp; Ratón: apuntar &nbsp;·&nbsp; Clic o Espacio: atacar &nbsp;·&nbsp; R: súper ataque</div>
+    <div id="controls-hint">WASD / Flechas: moverse &nbsp;·&nbsp; Clic o Espacio: atacar (auto-apuntado) &nbsp;·&nbsp; R: súper ataque</div>
   </section>
 
   <!-- ================= RESULTADO ================= -->
@@ -51,6 +53,7 @@
     <div class="result-box">
       <h1 id="result-title"></h1>
       <p id="result-subtitle"></p>
+      <p id="result-coins"></p>
       <div class="result-buttons">
         <button id="btn-rematch">Revancha</button>
         <button id="btn-reselect">Elegir otro personaje</button>
@@ -61,6 +64,7 @@
 </div>
 
 <script src="characters.js"></script>
+<script src="progression.js"></script>
 <script src="sprites.js"></script>
 <script src="combat.js"></script>
 <script src="ui.js"></script>

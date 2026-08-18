@@ -11,19 +11,27 @@
   let projectiles = [];
   let effects = []; // efectos visuales transitorios de los súper ataques (explosiones, auras, ondas...)
   let lastTime = 0;
-  let mouseX = ARENA_W / 2;
-  let mouseY = ARENA_H / 2;
   const keys = new Set();
   let arenaBackground = null; // canvas offscreen con la textura + decoración pre-renderizadas
 
   // ---------- Selección ----------
-  buildCharacterGrid(() => {
+  function handleCharacterSelected() {
     document.getElementById('btn-start').disabled = false;
-  });
+  }
+  buildCharacterGrid(handleCharacterSelected);
 
   document.getElementById('btn-start').addEventListener('click', () => {
-    if (!selectedCharacterId) return;
+    if (!selectedCharacterId || !isUnlocked(selectedCharacterId)) return;
     startCombat(selectedCharacterId);
+  });
+
+  document.getElementById('btn-reset-progress').addEventListener('click', () => {
+    const confirmed = window.confirm('¿Seguro que quieres borrar todo tu progreso (monedas, personajes desbloqueados y mejoras)? Esta acción no se puede deshacer.');
+    if (!confirmed) return;
+    resetProgress();
+    selectedCharacterId = null;
+    document.getElementById('btn-start').disabled = true;
+    buildCharacterGrid(handleCharacterSelected);
   });
 
   function pickCpuCharacter(excludeId) {
@@ -32,7 +40,9 @@
   }
 
   function startCombat(playerId) {
-    const playerDef = CHARACTERS.find(c => c.id === playerId);
+    // El jugador combate con sus stats finales (base + mejoras compradas); la CPU usa siempre
+    // los stats base del roster, sin las mejoras del progreso del jugador.
+    const playerDef = getFinalCharacterStats(playerId);
     const cpuDef = pickCpuCharacter(playerId);
 
     player = new Entity(playerDef, ARENA_W * 0.25, ARENA_H * 0.5, true);
@@ -67,12 +77,7 @@
   });
   window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
 
-  canvas.addEventListener('mousemove', e => {
-    const rect = canvas.getBoundingClientRect();
-    mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
-    mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
-  });
-
+  // El ratón ya no se usa para apuntar (auto-apuntado); el clic sigue sirviendo para atacar.
   canvas.addEventListener('mousedown', e => {
     e.preventDefault();
     attemptPlayerAttack();
@@ -80,12 +85,16 @@
 
   function attemptPlayerAttack() {
     if (state !== 'combat' || !player.alive) return;
-    performAttack(player, cpu, performance.now(), projectiles);
+    const now = performance.now();
+    if (!hasAcquiredTarget(player, now)) return; // misma humanización que la IA: sin objetivo trabado, no dispara
+    performAttack(player, cpu, now, projectiles);
   }
 
   function attemptPlayerSuper() {
     if (state !== 'combat' || !player.alive) return;
-    performSuper(player, cpu, performance.now(), { projectiles, effects });
+    const now = performance.now();
+    if (!hasAcquiredTarget(player, now)) return;
+    performSuper(player, cpu, now, { projectiles, effects });
   }
 
   // ---------- Loop ----------
@@ -109,8 +118,15 @@
     processPendingBursts(player, cpu, now, ctx2);
 
     if (!playerCharging && !player.isStunned) {
-      // Jugador: apunta al ratón y se mueve con WASD/flechas.
-      player.facing = Math.atan2(mouseY - player.y, mouseX - player.x);
+      // Jugador: se mueve con WASD/flechas y apunta automáticamente al rival (misma
+      // humanización de puntería que usa la IA), ya no hay apuntado manual con el ratón.
+      if (cpu.alive) {
+        const dx = cpu.x - player.x;
+        const dy = cpu.y - player.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const trueAngle = Math.atan2(dy, dx);
+        updateAiFacing(player, trueAngle, dist <= getEngageRange(player.def), now, dtScale);
+      }
 
       let mx = 0, my = 0;
       if (keys.has('w') || keys.has('arrowup')) my -= 1;
@@ -138,7 +154,9 @@
 
   function endCombat(playerWon) {
     state = 'result';
-    showResult(playerWon, player.def, cpu.def);
+    const coinsEarned = playerWon ? COINS_ON_WIN : COINS_ON_LOSE;
+    addCoins(coinsEarned);
+    showResult(playerWon, player.def, cpu.def, coinsEarned);
     showScreen('result-screen');
   }
 
@@ -582,8 +600,8 @@
   document.getElementById('btn-reselect').addEventListener('click', () => {
     state = 'select';
     document.getElementById('btn-start').disabled = true;
-    document.querySelectorAll('.char-card').forEach(el => el.classList.remove('selected'));
     selectedCharacterId = null;
+    buildCharacterGrid(handleCharacterSelected); // refresca monedas/desbloqueos tras la partida
     showScreen('select-screen');
   });
 })();
