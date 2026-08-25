@@ -21,6 +21,29 @@
     <button id="btn-start" disabled>Entrar a la arena</button>
   </section>
 
+  <!-- ================= MODAL: ARTE GRANDE DE PERSONAJE ================= -->
+  <div id="character-modal" class="modal-overlay">
+    <div class="modal-box">
+      <button id="modal-close" class="modal-close" type="button" title="Cerrar">✕</button>
+      <div class="modal-art" id="modal-art"></div>
+      <h2 id="modal-name"></h2>
+      <div id="modal-rarity" class="rarity-badge modal-rarity-badge"></div>
+      <p class="modal-role" id="modal-role"></p>
+      <p class="modal-lore" id="modal-lore"></p>
+      <div class="modal-stats" id="modal-stats"></div>
+
+      <div id="modal-locked-panel" class="modal-panel">
+        <div id="modal-unlock-cost" class="modal-unlock-cost"></div>
+        <button id="modal-unlock-btn" class="modal-action-btn" type="button">Desbloquear</button>
+      </div>
+
+      <div id="modal-unlocked-panel" class="modal-panel">
+        <button id="modal-select-btn" class="modal-action-btn" type="button">Seleccionar y jugar</button>
+        <div class="modal-upgrades" id="modal-upgrades"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= COMBATE ================= -->
   <section id="combat-screen" class="screen">
     <div id="hud">

@@ -154,9 +154,8 @@
 
   function endCombat(playerWon) {
     state = 'result';
-    const coinsEarned = playerWon ? COINS_ON_WIN : COINS_ON_LOSE;
-    addCoins(coinsEarned);
-    showResult(playerWon, player.def, cpu.def, coinsEarned);
+    const coinsDelta = applyMatchReward(playerWon);
+    showResult(playerWon, player.def, cpu.def, coinsDelta);
     showScreen('result-screen');
   }
 

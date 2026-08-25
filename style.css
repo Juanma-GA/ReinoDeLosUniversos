@@ -370,6 +370,192 @@ body {
   color: #f87171;
 }
 
+/* ===================== RAREZA ===================== */
+
+.rarity-badge {
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: -2px;
+  margin-bottom: 4px;
+}
+
+.char-card.rarity-normal { border-color: rgba(156, 163, 175, 0.7); }
+.char-card.rarity-raro { border-color: rgba(59, 130, 246, 0.75); }
+.char-card.rarity-epico { border-color: rgba(168, 85, 247, 0.8); }
+.char-card.rarity-mitico { border-color: rgba(234, 179, 8, 0.85); }
+
+.char-card.rarity-mitico {
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.25);
+}
+
+/* Legendario: marco con degradado arcoíris animado en vez de un color plano. */
+.char-card.rarity-legendario {
+  border: 3px solid transparent;
+  background-image:
+    linear-gradient(160deg, #241a3d, #17112b),
+    linear-gradient(90deg, #ff5e5e, #ffb347, #fff066, #6ee7a0, #60a5fa, #a78bfa, #ff5e5e);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size: 100% 100%, 300% 100%;
+  animation: legendaryShift 5s linear infinite;
+}
+
+.char-card.rarity-legendario.locked {
+  background-image:
+    linear-gradient(160deg, #1a1428, #100c1c),
+    linear-gradient(90deg, #ff5e5e, #ffb347, #fff066, #6ee7a0, #60a5fa, #a78bfa, #ff5e5e);
+}
+
+@keyframes legendaryShift {
+  0% { background-position: 0 0, 0% 0; }
+  100% { background-position: 0 0, 300% 0; }
+}
+
+/* ===================== MODAL: ARTE GRANDE ===================== */
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 3, 16, 0.75);
+  backdrop-filter: blur(2px);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal-box {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: linear-gradient(160deg, #241a3d, #17112b);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 18px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+  color: #f4f0ff;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.modal-close:hover {
+  border-color: #f87171;
+  color: #f87171;
+}
+
+.modal-art {
+  --char-color: #999;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--char-color) 25%, transparent), transparent 70%);
+  filter: drop-shadow(0 0 18px var(--char-color));
+}
+
+.modal-art-fallback {
+  font-size: 6rem;
+}
+
+.modal-box h2 {
+  font-size: 1.6rem;
+  margin-bottom: 2px;
+}
+
+.modal-rarity-badge {
+  font-size: 0.75rem;
+  margin-bottom: 8px;
+}
+
+.modal-role {
+  color: #cbb8ff;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.modal-lore {
+  color: #9a8fc0;
+  font-size: 0.78rem;
+  margin-bottom: 14px;
+}
+
+.modal-stats {
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.modal-stats .stat-row {
+  font-size: 0.75rem;
+}
+
+.modal-panel {
+  display: none;
+}
+
+.modal-unlock-cost {
+  font-weight: bold;
+  color: #facc15;
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+}
+
+.modal-action-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 24px;
+  background: linear-gradient(90deg, #f472b6, #facc15);
+  color: #1c1330;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.modal-action-btn:hover {
+  transform: scale(1.03);
+}
+
+.modal-action-btn.shake {
+  color: #f87171;
+}
+
+.modal-upgrades {
+  margin-top: 16px;
+  text-align: left;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 12px;
+}
+
+.modal-upgrades .upgrade-row {
+  font-size: 0.78rem;
+}
+
 /* ===================== COMBATE ===================== */
 
 #hud {
@@ -532,6 +718,10 @@ body {
   font-weight: bold;
   font-size: 1.1rem;
   margin-top: -12px;
+}
+
+#result-coins.coins-lost {
+  color: #f87171;
 }
 
 .result-buttons {

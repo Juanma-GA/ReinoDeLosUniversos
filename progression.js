@@ -6,9 +6,8 @@
 const PROGRESS_STORAGE_KEY = 'reino_universos_progress_v1';
 const DEFAULT_UNLOCKED_IDS = ['elfo'];
 
-const UNLOCK_COST = 150;
 const COINS_ON_WIN = 50;
-const COINS_ON_LOSE = 10;
+const COINS_ON_LOSE = 10; // se RESTA al perder (con suelo en 0)
 
 // Coste del nivel 1, 2 y 3 respectivamente (mismo escalonado para las 3 stats mejorables).
 const UPGRADE_COSTS = [80, 120, 180];
@@ -60,14 +59,36 @@ function addCoins(amount) {
   saveProgress();
 }
 
+// Aplica el resultado de una partida: +50 monedas si se gana, -10 si se pierde (con suelo en 0,
+// nunca queda negativo). Devuelve el delta REAL aplicado (puede ser menor que -10 si no había
+// suficientes monedas), para que la pantalla de resultado muestre la cifra exacta.
+function applyMatchReward(won) {
+  if (won) {
+    _progress.coins += COINS_ON_WIN;
+    saveProgress();
+    return COINS_ON_WIN;
+  }
+  const before = _progress.coins;
+  _progress.coins = Math.max(0, _progress.coins - COINS_ON_LOSE);
+  saveProgress();
+  return _progress.coins - before;
+}
+
 function isUnlocked(charId) {
   return _progress.unlocked.indexOf(charId) !== -1;
 }
 
+// Coste de desbloqueo de un personaje, según la rareza definida en characters.js.
+function getUnlockCost(charId) {
+  const def = CHARACTERS.find(c => c.id === charId);
+  return RARITIES[def.rarity].cost;
+}
+
 function unlockCharacter(charId) {
   if (isUnlocked(charId)) return { success: false, reason: 'already' };
-  if (_progress.coins < UNLOCK_COST) return { success: false, reason: 'insufficient' };
-  _progress.coins -= UNLOCK_COST;
+  const cost = getUnlockCost(charId);
+  if (_progress.coins < cost) return { success: false, reason: 'insufficient' };
+  _progress.coins -= cost;
   _progress.unlocked.push(charId);
   saveProgress();
   return { success: true };

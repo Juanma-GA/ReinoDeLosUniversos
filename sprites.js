@@ -671,6 +671,578 @@ function drawEspectroSprite(ctx, pose) {
   ctx.restore();
 }
 
+// ---------- 10 personajes adicionales (tanda 1 de 2) ----------
+
+function drawVelociraptorSprite(ctx, pose) {
+  const skin = '#84cc16';
+  const skinDark = '#4d7c0f';
+  const belly = '#d9f99d';
+  const claw = '#e8e4da';
+
+  const legOffset = pose.leg * 5;
+  const armSwing = pose.arm * 5;
+  const attackExtend = pose.attack ? 12 : 0;
+
+  // Cola larga
+  ctx.strokeStyle = skinDark;
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-10, 4);
+  ctx.quadraticCurveTo(-28, 8 + legOffset * 0.5, -38, -4 - legOffset);
+  ctx.stroke();
+
+  // Piernas traseras potentes con garra curva
+  sEllipse(ctx, -6 + legOffset, 18, 6, 10, skinDark);
+  sEllipse(ctx, 6 - legOffset, 18, 6, 10, skinDark);
+  ctx.fillStyle = claw;
+  ctx.beginPath();
+  ctx.moveTo(-6 + legOffset, 26);
+  ctx.lineTo(-10 + legOffset, 30);
+  ctx.lineTo(-4 + legOffset, 28);
+  ctx.fill();
+
+  // Torso inclinado hacia delante
+  sEllipse(ctx, 2, -2, 12, 14, skin);
+  sEllipse(ctx, 4, 4, 8, 7, belly);
+
+  // Brazos pequeños con garras
+  const handX = 14 + attackExtend;
+  const handY = 0 - armSwing;
+  sLimb(ctx, 10, -4, handX, handY, 4, skin);
+  sLimb(ctx, 8, 2, 4 - armSwing * 0.3, 8, 4, skin);
+
+  // Cabeza alargada con hocico y dientes
+  sEllipse(ctx, 14, -18, 9, 7, skin);
+  ctx.fillStyle = skin;
+  ctx.beginPath();
+  ctx.moveTo(20, -18);
+  ctx.lineTo(30 + attackExtend * 0.4, -16);
+  ctx.lineTo(20, -14);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(22, -16, 5, 1.4);
+  ctx.fillStyle = skinDark;
+  ctx.beginPath();
+  ctx.moveTo(6, -24);
+  ctx.lineTo(10, -30);
+  ctx.lineTo(14, -24);
+  ctx.fill();
+  sCircle(ctx, 12, -19, 1.3, '#1a1a1a');
+}
+
+function drawPteranodonteSprite(ctx, pose) {
+  const skin = '#38bdf8';
+  const skinDark = '#0284c7';
+  const beak = '#f97316';
+
+  const flap = pose.leg * 8;
+  const armSwing = pose.arm * 6;
+  const attackExtend = pose.attack ? 10 : 0;
+
+  // Alas grandes (membranas)
+  ctx.fillStyle = skinDark;
+  ctx.beginPath();
+  ctx.moveTo(-2, -4);
+  ctx.quadraticCurveTo(-26, -14 - flap, -34, 2 - flap * 0.4);
+  ctx.quadraticCurveTo(-18, 4, -2, 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = skin;
+  ctx.beginPath();
+  ctx.moveTo(4, -4 - armSwing * 0.2);
+  ctx.quadraticCurveTo(28, -14 + flap, 36, 2 + flap * 0.4);
+  ctx.quadraticCurveTo(20, 4, 4, 8);
+  ctx.closePath();
+  ctx.fill();
+
+  // Patitas plegadas
+  sEllipse(ctx, -2, 16, 4, 6, skinDark);
+  sEllipse(ctx, 4, 16, 4, 6, skinDark);
+
+  // Cuerpo
+  sEllipse(ctx, 2, 2, 9, 12, skin);
+
+  // Cabeza con cresta y pico largo
+  sCircle(ctx, 10, -14, 8, skin);
+  ctx.fillStyle = skinDark;
+  ctx.beginPath();
+  ctx.moveTo(8, -22);
+  ctx.lineTo(14, -32);
+  ctx.lineTo(14, -20);
+  ctx.fill();
+  ctx.fillStyle = beak;
+  ctx.beginPath();
+  ctx.moveTo(16, -16);
+  ctx.lineTo(30 + attackExtend, -14);
+  ctx.lineTo(16, -12);
+  ctx.fill();
+  sCircle(ctx, 8, -15, 1.2, '#1a1a1a');
+}
+
+function drawMinotauroSprite(ctx, pose) {
+  const skin = '#92400e';
+  const fur = '#57310c';
+  const horn = '#e8e4da';
+  const weapon = '#5c5c66';
+  const weaponHandle = '#4a3319';
+
+  const legOffset = pose.leg * 4;
+  const armSwing = pose.arm * 6;
+  const attackExtend = pose.attack ? 16 : 0;
+
+  // Piernas
+  sEllipse(ctx, -9 + legOffset, 20, 7, 10, fur);
+  sEllipse(ctx, 9 - legOffset, 20, 7, 10, fur);
+
+  // Torso musculoso con hombros marcados
+  sEllipse(ctx, 0, -3, 17, 17, skin);
+  sCircle(ctx, -14, -12, 7, skin);
+  sCircle(ctx, 14, -12, 7, skin);
+  sEllipse(ctx, 0, 10, 14, 4, fur);
+
+  // Brazo libre
+  sLimb(ctx, -16, -6, -21 - armSwing * 0.3, 8, 8, skin);
+
+  // Brazo con maza de piedra
+  const handX = 18 + attackExtend;
+  const handY = 4 - armSwing;
+  sLimb(ctx, 16, -6, handX, handY, 8, skin);
+  ctx.save();
+  ctx.translate(handX, handY);
+  ctx.rotate(0.4 + (pose.attack ? -0.8 : 0));
+  ctx.fillStyle = weaponHandle;
+  ctx.fillRect(-2, -4, 4, 24);
+  ctx.fillStyle = weapon;
+  ctx.beginPath();
+  ctx.arc(0, -20, 9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Cabeza de toro con hocico y cuernos
+  sCircle(ctx, 0, -26, 10, skin);
+  sEllipse(ctx, 0, -21, 6, 4, '#3a2a1a');
+  ctx.fillStyle = horn;
+  ctx.beginPath();
+  ctx.moveTo(-8, -30);
+  ctx.lineTo(-15, -38);
+  ctx.lineTo(-6, -33);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(8, -30);
+  ctx.lineTo(15, -38);
+  ctx.lineTo(6, -33);
+  ctx.fill();
+  sCircle(ctx, -4, -27, 1.3, '#1a1a1a');
+  sCircle(ctx, 4, -27, 1.3, '#1a1a1a');
+}
+
+function drawTriceratopsSprite(ctx, pose) {
+  const skin = '#4d7c0f';
+  const skinDark = '#365a08';
+  const frill = '#6b9e1f';
+  const horn = '#e8e0c8';
+
+  const legOffset = pose.leg * 3;
+  const attackExtend = pose.attack ? 10 : 0;
+
+  // Patas gruesas
+  sEllipse(ctx, -10 + legOffset, 20, 7, 9, skinDark);
+  sEllipse(ctx, 10 - legOffset, 20, 7, 9, skinDark);
+
+  // Cuerpo robusto
+  sEllipse(ctx, 0, 2, 17, 15, skin);
+
+  // Gola/collar detrás de la cabeza
+  ctx.fillStyle = frill;
+  ctx.beginPath();
+  ctx.ellipse(0, -20, 17, 14, 0, Math.PI, Math.PI * 2);
+  ctx.fill();
+
+  // Cabeza con pico
+  sEllipse(ctx, attackExtend * 0.3, -18, 11, 9, skin);
+  ctx.fillStyle = skinDark;
+  ctx.beginPath();
+  ctx.moveTo(9 + attackExtend * 0.3, -18);
+  ctx.lineTo(16 + attackExtend, -17);
+  ctx.lineTo(9 + attackExtend * 0.3, -14);
+  ctx.fill();
+
+  // 3 cuernos
+  ctx.fillStyle = horn;
+  ctx.beginPath();
+  ctx.moveTo(-2, -26);
+  ctx.lineTo(-4, -36);
+  ctx.lineTo(0, -27);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-8, -22);
+  ctx.lineTo(-14, -28);
+  ctx.lineTo(-6, -18);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(8, -22);
+  ctx.lineTo(14, -28);
+  ctx.lineTo(6, -18);
+  ctx.fill();
+
+  sCircle(ctx, -3, -19, 1.3, '#1a1a1a');
+  sCircle(ctx, 3, -19, 1.3, '#1a1a1a');
+}
+
+function drawSirenaSprite(ctx, pose) {
+  const skin = '#f0c090';
+  const hair = '#0f766e';
+  const scale = '#2dd4bf';
+  const scaleDark = '#0f9488';
+  const fin = '#5eead4';
+
+  const tailSway = pose.leg * 6;
+  const armSwing = pose.arm * 5;
+  const attackExtend = pose.attack ? 6 : 0;
+
+  // Cola de pez ondulante en vez de piernas
+  ctx.fillStyle = scale;
+  ctx.beginPath();
+  ctx.moveTo(-8, 4);
+  ctx.quadraticCurveTo(-4 + tailSway, 16, -10 + tailSway, 26);
+  ctx.quadraticCurveTo(0, 20, 4, 26);
+  ctx.quadraticCurveTo(4 + tailSway, 14, 8, 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = fin;
+  ctx.beginPath();
+  ctx.moveTo(-10 + tailSway, 26);
+  ctx.lineTo(-16 + tailSway, 32);
+  ctx.lineTo(-4 + tailSway, 28);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(4 + tailSway, 26);
+  ctx.lineTo(10 + tailSway, 32);
+  ctx.lineTo(0 + tailSway, 28);
+  ctx.fill();
+
+  // Torso con top de conchas
+  sEllipse(ctx, 0, -6, 9, 12, skin);
+  sEllipse(ctx, -4, -10, 3, 2, scaleDark);
+  sEllipse(ctx, 4, -10, 3, 2, scaleDark);
+
+  // Brazos
+  sLimb(ctx, -8, -8, -13 - armSwing * 0.3, 0, 4, skin);
+  const handX = 12 + attackExtend;
+  const handY = -8 - armSwing;
+  sLimb(ctx, 8, -8, handX, handY, 4, skin);
+
+  // Cabeza y pelo largo ondulante
+  sCircle(ctx, 0, -22, 8, skin);
+  ctx.fillStyle = hair;
+  ctx.beginPath();
+  ctx.arc(0, -25, 8, Math.PI, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-8, -22);
+  ctx.quadraticCurveTo(-14, -10, -10 + tailSway * 0.3, 0);
+  ctx.quadraticCurveTo(-6, -12, -6, -22);
+  ctx.fill();
+
+  sCircle(ctx, -3, -22, 1.1, '#1a1a1a');
+  sCircle(ctx, 3, -22, 1.1, '#1a1a1a');
+
+  // Ondas de canto al atacar
+  if (pose.attack) {
+    ctx.strokeStyle = 'rgba(94,234,212,0.8)';
+    ctx.lineWidth = 1.4;
+    for (let i = 0; i < 2; i++) {
+      ctx.beginPath();
+      ctx.arc(6, -20, 8 + i * 6, -0.6, 0.6);
+      ctx.stroke();
+    }
+  }
+}
+
+// ---------- 10 personajes adicionales (tanda 2 de 2) ----------
+
+function drawUnicornioSprite(ctx, pose) {
+  const skin = '#f8fafc';
+  const skinDark = '#dbe3ee';
+  const mane = '#f0abfc';
+  const horn = '#fef08a';
+  const hoof = '#c4b5fd';
+
+  const legOffset = pose.leg * 4;
+  const armSwing = pose.arm * 4;
+  const attackExtend = pose.attack ? 8 : 0;
+
+  // Patas traseras
+  sEllipse(ctx, -8 + legOffset, 20, 6, 9, hoof);
+  sEllipse(ctx, 8 - legOffset, 20, 6, 9, hoof);
+
+  // Cuerpo
+  sEllipse(ctx, 0, -2, 13, 16, skin);
+
+  // Patas delanteras (encabritado)
+  sLimb(ctx, -8, -6, -14 - armSwing * 0.3, 6, 4, skin);
+  const handX = 12 + attackExtend;
+  const handY = 0 - armSwing;
+  sLimb(ctx, 8, -6, handX, handY, 4, skin);
+
+  // Cola
+  ctx.strokeStyle = mane;
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-10, 6);
+  ctx.quadraticCurveTo(-20, 14, -16, 26);
+  ctx.stroke();
+
+  // Cabeza con hocico
+  sEllipse(ctx, 0, -24, 9, 8, skin);
+  ctx.fillStyle = skinDark;
+  ctx.beginPath();
+  ctx.moveTo(6, -22);
+  ctx.lineTo(15, -20);
+  ctx.lineTo(6, -18);
+  ctx.fill();
+
+  // Melena
+  ctx.fillStyle = mane;
+  ctx.beginPath();
+  ctx.moveTo(-6, -30);
+  ctx.quadraticCurveTo(-11, -18, -6, -8);
+  ctx.quadraticCurveTo(-2, -20, -2, -30);
+  ctx.fill();
+
+  // Cuerno brillante
+  ctx.save();
+  ctx.shadowColor = horn;
+  ctx.shadowBlur = pose.attack ? 10 : 5;
+  ctx.fillStyle = horn;
+  ctx.beginPath();
+  ctx.moveTo(-2, -30);
+  ctx.lineTo(1, -39);
+  ctx.lineTo(3, -29);
+  ctx.fill();
+  ctx.restore();
+
+  sCircle(ctx, 3, -24, 1.1, '#1a1a1a');
+}
+
+function drawEstegosaurioSprite(ctx, pose) {
+  const skin = '#78716c';
+  const skinDark = '#57534e';
+  const plate = '#a8a29e';
+  const spike = '#e7e5e4';
+
+  const legOffset = pose.leg * 2;
+  const attackExtend = pose.attack ? 10 : 0;
+
+  // Patas gruesas y cortas
+  sEllipse(ctx, -10 + legOffset, 20, 7, 9, skinDark);
+  sEllipse(ctx, 10 - legOffset, 20, 7, 9, skinDark);
+
+  // Cuerpo bajo y ancho
+  sEllipse(ctx, 0, 4, 18, 14, skin);
+
+  // Placas dorsales
+  ctx.fillStyle = plate;
+  [[-10, -8], [0, -12], [10, -8]].forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.moveTo(x - 5, 0);
+    ctx.lineTo(x, y - 6);
+    ctx.lineTo(x + 5, 0);
+    ctx.fill();
+  });
+
+  // Cola con púas
+  ctx.strokeStyle = skinDark;
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-16, 6);
+  ctx.quadraticCurveTo(-30, 10, -34 - attackExtend * 0.5, 0);
+  ctx.stroke();
+  ctx.fillStyle = spike;
+  [[-30, 4], [-36, -4]].forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.moveTo(x - attackExtend * 0.5, y);
+    ctx.lineTo(x - 8 - attackExtend * 0.5, y - 4);
+    ctx.lineTo(x - attackExtend * 0.5, y + 4);
+    ctx.fill();
+  });
+
+  // Cabeza pequeña y baja
+  sEllipse(ctx, 16, 6, 7, 5, skin);
+  sCircle(ctx, 20, 5, 1.1, '#1a1a1a');
+}
+
+function drawBraquiosaurioSprite(ctx, pose) {
+  const skin = '#57534e';
+  const skinDark = '#3f3c39';
+  const belly = '#78716c';
+
+  const legOffset = pose.leg * 2;
+  const attackExtend = pose.attack ? 6 : 0;
+
+  // Patas muy gruesas
+  sEllipse(ctx, -10 + legOffset, 24, 7, 8, skinDark);
+  sEllipse(ctx, 10 - legOffset, 24, 7, 8, skinDark);
+
+  // Cuerpo enorme
+  sEllipse(ctx, -2, 12, 18, 13, skin);
+  sEllipse(ctx, -2, 19, 12, 5, belly);
+
+  // Cola corta
+  ctx.strokeStyle = skinDark;
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-18, 10);
+  ctx.lineTo(-30, 16);
+  ctx.stroke();
+
+  // Cuello largo hacia arriba (ajustado para no salir del lienzo)
+  ctx.strokeStyle = skin;
+  ctx.lineWidth = 9;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(9, 2);
+  ctx.quadraticCurveTo(15, -16, 11 + attackExtend * 0.5, -30);
+  ctx.stroke();
+
+  // Cabeza pequeña
+  sEllipse(ctx, 11 + attackExtend * 0.5, -34, 6, 5, skin);
+  sCircle(ctx, 14 + attackExtend * 0.5, -35, 1, '#1a1a1a');
+}
+
+function drawDragonSprite(ctx, pose) {
+  const skin = '#f97316';
+  const skinDark = '#c2410c';
+  const belly = '#fed7aa';
+  const wing = '#7c2d12';
+  const horn = '#fef3c7';
+
+  const legOffset = pose.leg * 3;
+  const flap = pose.arm * 8;
+  const attackExtend = pose.attack ? 10 : 0;
+
+  // Alas
+  ctx.fillStyle = wing;
+  ctx.beginPath();
+  ctx.moveTo(-4, -8);
+  ctx.quadraticCurveTo(-28, -20 - flap, -32, 0 - flap * 0.3);
+  ctx.quadraticCurveTo(-16, -2, -4, 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(4, -8);
+  ctx.quadraticCurveTo(28, -20 + flap, 32, 0 + flap * 0.3);
+  ctx.quadraticCurveTo(16, -2, 4, 4);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cola
+  ctx.strokeStyle = skinDark;
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-8, 14);
+  ctx.quadraticCurveTo(-20, 22, -16, 32);
+  ctx.stroke();
+
+  // Piernas
+  sEllipse(ctx, -7 + legOffset, 20, 6, 8, skinDark);
+  sEllipse(ctx, 7 - legOffset, 20, 6, 8, skinDark);
+
+  // Torso
+  sEllipse(ctx, 0, 0, 13, 15, skin);
+  sEllipse(ctx, 0, 6, 8, 8, belly);
+
+  // Cabeza con cuernos y hocico
+  sEllipse(ctx, 0, -20, 9, 8, skin);
+  ctx.fillStyle = skinDark;
+  ctx.beginPath();
+  ctx.moveTo(6, -20);
+  ctx.lineTo(16 + attackExtend, -18);
+  ctx.lineTo(6, -15);
+  ctx.fill();
+  ctx.fillStyle = horn;
+  ctx.beginPath();
+  ctx.moveTo(-4, -26);
+  ctx.lineTo(-7, -34);
+  ctx.lineTo(-2, -27);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(4, -26);
+  ctx.lineTo(7, -34);
+  ctx.lineTo(2, -27);
+  ctx.fill();
+  sCircle(ctx, -2, -21, 1.2, '#1a1a1a');
+
+  // Aliento de fuego al atacar
+  if (pose.attack) {
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    const g = ctx.createLinearGradient(14, -20, 36, -20);
+    g.addColorStop(0, '#fff7b0');
+    g.addColorStop(1, 'rgba(249,115,22,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(14, -20);
+    ctx.lineTo(36, -22);
+    ctx.lineTo(36, -14);
+    ctx.lineTo(14, -16);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawTRexSprite(ctx, pose) {
+  const skin = '#dc2626';
+  const skinDark = '#991b1b';
+  const belly = '#fca5a5';
+  const teeth = '#fff7ed';
+
+  const legOffset = pose.leg * 4;
+  const armSwing = pose.arm * 3;
+  const attackExtend = pose.attack ? 14 : 0;
+
+  // Cola gruesa
+  ctx.strokeStyle = skinDark;
+  ctx.lineWidth = 9;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-10, 6);
+  ctx.quadraticCurveTo(-26, 10 + legOffset * 0.5, -32, -2 - legOffset);
+  ctx.stroke();
+
+  // Piernas gruesas
+  sEllipse(ctx, -7 + legOffset, 20, 8, 11, skinDark);
+  sEllipse(ctx, 7 - legOffset, 20, 8, 11, skinDark);
+
+  // Torso musculoso inclinado
+  sEllipse(ctx, 3, -2, 14, 16, skin);
+  sEllipse(ctx, 5, 4, 8, 8, belly);
+
+  // Brazos diminutos
+  sLimb(ctx, 10, -2, 14 - armSwing * 0.2, 4, 3, skin);
+
+  // Cabeza enorme con mandíbula
+  sEllipse(ctx, 16, -18, 12, 9, skin);
+  ctx.fillStyle = skinDark;
+  const jawOpen = pose.attack ? 6 : 2;
+  ctx.beginPath();
+  ctx.moveTo(24, -16);
+  ctx.lineTo(36 + attackExtend, -14 + jawOpen);
+  ctx.lineTo(24, -10 + jawOpen);
+  ctx.fill();
+  ctx.fillStyle = teeth;
+  for (let i = 0; i < 3; i++) {
+    ctx.fillRect(26 + i * 4, -16, 2, 3);
+  }
+  sCircle(ctx, 13, -20, 1.4, '#1a1a1a');
+}
+
 // ---------- Registro y construcción de la caché de sprites ----------
 
 const CHARACTER_SPRITE_DRAWERS = {
@@ -682,7 +1254,17 @@ const CHARACTER_SPRITE_DRAWERS = {
   mago: drawMagoSprite,
   hobbit: drawHobbitSprite,
   orco: drawOrcoSprite,
-  espectro: drawEspectroSprite
+  espectro: drawEspectroSprite,
+  velociraptor: drawVelociraptorSprite,
+  pteranodonte: drawPteranodonteSprite,
+  minotauro: drawMinotauroSprite,
+  triceratops: drawTriceratopsSprite,
+  sirena: drawSirenaSprite,
+  unicornio: drawUnicornioSprite,
+  estegosaurio: drawEstegosaurioSprite,
+  braquiosaurio: drawBraquiosaurioSprite,
+  dragon: drawDragonSprite,
+  trex: drawTRexSprite
 };
 
 const SPRITE_CACHE = {};
